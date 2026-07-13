@@ -332,5 +332,75 @@ namespace MikrotikBackgroundService.Class
             }
             return false;
         }
+        public string DeleteInterfacebyPlan(string Plan)
+        {
+            try
+            {
+                Send("/ppp/secret/print");
+                Send("?profile=" + Plan);
+                Send("=.proplist=name", true);
+
+                //Send("=.proplist=name", true);
+                List<string> planes = new List<string>();
+                foreach (string row in Read())
+                {
+                    if (row.StartsWith("!re"))
+                    {
+                        continue;
+                    }
+                    if (row.StartsWith("!done")) break;
+
+                    if (row.StartsWith("="))
+                    {
+                        string[] parts = row.Split(new char[] { '=' }, 3);
+                        if (parts.Length < 3) continue;
+
+                        string key = parts[1];
+                        string value = parts[2];
+
+                        if (key == "name")
+                        {
+                            DeleteInterfacebyName(value);
+                        }
+                    }
+                }
+
+            }
+            catch (Exception e)
+            {
+                return e.Message;
+            }
+            return string.Empty;
+        }
+
+        public void DeleteInterfacebyName(string Name)
+        {
+            Send("/ppp/active/print");
+            Send("?name=" + Name);
+            Send("=.proplist=.id", true);
+            foreach (string row2 in Read())
+            {
+                if (row2.StartsWith("!re"))
+                {
+                    continue;
+                }
+                if (row2.StartsWith("!done")) break;
+
+                if (row2.StartsWith("="))
+                {
+                    string[] parts2 = row2.Split(new char[] { '=' }, 3);
+                    if (parts2.Length < 3) continue;
+
+                    string key2 = parts2[1];
+                    string value2 = parts2[2];
+
+                    if (key2 == ".id")
+                    {
+                        Send("/ppp/active/remove");
+                        Send("=.id=" + value2, true);
+                    }
+                }
+            }
+        }
     }
 }
