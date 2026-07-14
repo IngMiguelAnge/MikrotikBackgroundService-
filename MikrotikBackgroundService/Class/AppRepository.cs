@@ -35,6 +35,7 @@ namespace MikrotikBackgroundService.Class
                             {
                                 list.Add(MapToUsuarioMikrotik(reader));
                             }
+                            response = list.Count() > 0 ? list[0] : new UsuariosGeneralModel();
                         }
                     }
                 }
@@ -166,7 +167,7 @@ namespace MikrotikBackgroundService.Class
                 Estatus = (string)reader["Estatus"],
                 Modo = (string)reader["Modo"],
                 IdUsuarioM = (int)reader["IdUsuarioM"],
-                Nota = (string)reader["Nota"],
+                Nota = Convert.IsDBNull(reader["Nota"]) ? string.Empty : (string)reader["Nota"],
                 IdPlan = (int)reader["IdPlan"],
                 IdMikrotik = (int)reader["IdMikrotik"],
                 IdPlanOriginal = (int)reader["IdPlanOriginal"],
@@ -216,14 +217,14 @@ namespace MikrotikBackgroundService.Class
                             {
                                 list.Add(MapToPlan(reader));
                             }
-                            response = list.Count() > 0 ? list[0] : null;
+                            response = list.Count() > 0 ? list[0] : new PlanModel();
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                response = null;
+                response = new PlanModel();
             }
             return response;
         }

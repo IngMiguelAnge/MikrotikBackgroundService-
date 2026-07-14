@@ -26,6 +26,7 @@ namespace MikrotikBackgroundService
             {
                 if (MikrotiksInabilitados.Contains(item.IdMikrotik))
                 {
+                    _logger.LogInformation("Mikrotik inactivo ya enlistado Id:" + item.IdMikrotik.ToString());
                     await obj.SaveTiempoCambioEstatus(item.Id, "Error", "Mikrotik inactivo");
                     continue;
                 }
@@ -37,6 +38,7 @@ namespace MikrotikBackgroundService
                     if (mikro.Estatus == false)
                     {
                         MikrotiksInabilitados.Add(item.IdMikrotik);
+                        _logger.LogInformation("Mikrotik inactivo Id:" + item.IdMikrotik.ToString());
                         await obj.SaveTiempoCambioEstatus(item.Id, "Error", "Mikrotik inactivo");
                         continue;
                     }
@@ -52,7 +54,8 @@ namespace MikrotikBackgroundService
                     if (login == false)
                     {
                         MikrotiksInabilitados.Add(item.IdMikrotik);
-                        await obj.SaveTiempoCambioEstatus(item.Id, "Error", "Mikrotik inactivo");
+                        _logger.LogInformation("Error al conectar con el Mikrotik Id:" + item.IdMikrotik.ToString());
+                        await obj.SaveTiempoCambioEstatus(item.Id, "Error", "Error al conectar con el Mikrotik");
                         continue;
                     }
                 }
@@ -62,15 +65,18 @@ namespace MikrotikBackgroundService
                 var Plan = await obj.GetPlanById(BuscarID); //Se busca el plan nuevo
                 if (Plan.Estatus == false)
                 {
+                    _logger.LogInformation("Plan Inactivo" + Plan.Nombre);
                     await obj.SaveTiempoCambioEstatus(item.Id, "Error", "Plan inactivo");
                     continue;
                 }
                 var Usuario = await obj.GetUsuariosMikrotiksById(item.IdUsuarioM);
                 if (Usuario.Estatus != "Activo")
                 {
+                    _logger.LogInformation("Usuario Inactivo" + Usuario.Usuario);
                     await obj.SaveTiempoCambioEstatus(item.Id, "Error", "Usuario inactivo");
                     continue;
                 }
+                _logger.LogInformation("Comenzando actualización de mikrotik");
                 if (Plan.IsAntena == true)
                     Result1 = mikrotik.ActualizarVelocidadQueue(Usuario.Usuario, Plan.Velocidad);
                 else
@@ -86,22 +92,21 @@ namespace MikrotikBackgroundService
                 }
                 if (Result1 == true)
                 {
+                    _logger.LogInformation("Comenzando actualización de plan de base general");
                     string ModoEnviar = Modo == "Pendiente" ? item.Modo : "Permanente";
                     var Ressult = await obj.UpdatePlanGeneral(item.Id, Plan.Id, ModoEnviar);
                     if (item.Modo == "Permanente")
                         await obj.SaveTiempoCambioEstatus(item.Id, "Completado", "Se actualizo el plan a " + Plan.Nombre);
                     else
                     {
-                        if (item.Modo == "Pendiente")
-                        {
-                            await obj.SaveTiempoCambioEstatus(item.Id, "En ejecución", "Se actualizo el plan a " + Plan.Nombre);
-                        }
+                        if(Modo == "Pendiente")
+                            await obj.SaveTiempoCambioEstatus(item.Id, "Ejecutando", "Se actualizo el plan a " + Plan.Nombre);
                         else
-                        {
                             await obj.SaveTiempoCambioEstatus(item.Id, "Completado", "Se actualizo el plan a " + Plan.Nombre);
-                        }
-                    }                      
+                    }
                 }
+                else
+                    _logger.LogInformation("Fallo actualización de mikrotik");
             }
         }
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -114,18 +119,22 @@ namespace MikrotikBackgroundService
                     //_logger.LogInformation( "Intentando conectar a SQL Server...");
 
                     AppRepository obj = new AppRepository();
+                    _logger.LogInformation("Buscando pendientes...");
                     List<TiempoCambioModel> tc = await obj.GetTiempoCambiobyEstatus("Pendiente");
-                    if(tc.Count > 0)
+                    if (tc.Count > 0)
                     {
+                        _logger.LogInformation("Se va a actualizar los planes pendientes...");
                         await Actualizaplanes(tc, "Pendiente");
                     }
                     AppRepository obj2 = new AppRepository();
-                    List<TiempoCambioModel> tc2 = await obj2.GetTiempoCambiobyEstatus("En ejecución");
+                    _logger.LogInformation("Buscando en ejecución...");
+                    List<TiempoCambioModel> tc2 = await obj2.GetTiempoCambiobyEstatus("Ejecutando");
                     if (tc2.Count > 0)
                     {
-                       await Actualizaplanes(tc2, "En ejecución");
+                        _logger.LogInformation("Se va a actualizar los planes en ejecucion...");
+                        await Actualizaplanes(tc2, "Ejecutando");
                     }
-                }  
+                }
                 catch (Exception ex)
                 {
                     // Evita que el servicio se caiga o se quede en START_PENDING si hay un error fatal
