@@ -9,7 +9,7 @@ namespace MikrotikBackgroundService.Class
         public string MikrotikConnection { get; set; }
         public AppRepository(bool isUnitOfWork = false)
         {
-            MikrotikConnection = "Data Source=.;Initial Catalog=Mikrotiks;User ID=sa;Password=admin123;Trust Server Certificate=True";
+            MikrotikConnection = "Data Source=DESKTOP-K9P8F3O;Initial Catalog=Mikrotiks;User ID=sa;Password=admin123;Trust Server Certificate=True";
         }
         public void Dispose()
         {
