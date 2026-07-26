@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MikrotikBackgroundService.Model;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -211,6 +212,182 @@ namespace MikrotikBackgroundService.Class
 
             }
             return Id;
+        }
+        public bool CambiarEstatusAntena(string Id, string Estatus)
+        {
+            try
+            {
+                Send("/ip/firewall/address-list/set");
+                Send("=.id=" + Id);
+                if (Estatus == "Activo")
+                    Send("=disabled=yes", true);
+                else
+                    Send("=disabled=no", true);
+
+                List<string> respuesta = Read();
+                // Si no hay errores (!trap), asumimos éxito
+                return !respuesta.Any(r => r.Contains("!trap"));
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+        public bool AgregarAntena(string listName, string ipAddress, string comment = "", bool disabled = false)
+        {
+            try
+            {
+                // 1. Comando principal para agregar
+                Send("/ip/firewall/address-list/add");
+
+                // 2. Parámetros obligatorios
+                Send("=list=" + listName);
+                Send("=address=" + ipAddress);
+
+                // 3. Parámetros opcionales
+                if (!string.IsNullOrEmpty(comment))
+                {
+                    Send("=comment=" + comment);
+                }
+
+                // El 'true' en el último Send envía la señal de fin de frase al RouterOS
+                string statusDisabled = disabled ? "yes" : "no";
+                Send("=disabled=" + statusDisabled, true);
+
+                // 4. Leer la respuesta y verificar que no devuelva un error (!trap)
+                List<string> respuesta = Read();
+                return !respuesta.Any(r => r.Contains("!trap"));
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+        public List<AddressModel> VerAddres()
+        {
+            List<AddressModel> listaFinal = new List<AddressModel>();
+            try
+            {
+                // Enviamos el comando a la ruta de IP -> Address
+                Send("/ip/address/print");
+                Send("=.proplist=.id,address,comment,network,interface,actual-interface,disabled", true);// Esto ayuda a que el router no se pierda enviando datos extra
+                AddressModel currentObj = null;
+                List<string> respuesta = Read();
+                foreach (string row in respuesta)
+                {
+                    // Cada vez que aparece !re, es una nueva fila/registro
+                    if (row.StartsWith("!re"))
+                    {
+                        currentObj = new AddressModel();
+                        currentObj.comment = "Sin Comentario"; // Valor por defecto
+                        listaFinal.Add(currentObj);
+                        continue;
+                    }
+
+                    if (row.StartsWith("!done")) break;
+
+                    // Procesamos las propiedades del objeto actual
+                    if (row.StartsWith("=") && currentObj != null)
+                    {
+                        string[] parts = row.Substring(1).Split(new char[] { '=' }, 2);
+                        if (parts.Length < 2) continue;
+
+                        string key = parts[0];
+                        string value = parts[1];
+
+                        switch (key)
+                        {
+                            case ".id": currentObj.id = value; break;
+                            case "address": currentObj.address = value; break;
+                            case "comment":
+                                string valueLimpio = value.Replace("\r", "").Replace("\n", "").Trim();
+                                byte[] bytesMalos = Encoding.GetEncoding("ISO-8859-1").GetBytes(valueLimpio);
+                                currentObj.comment = Encoding.UTF8.GetString(bytesMalos);
+                                break;
+                            case "disabled":
+                                currentObj.estatus = value == "false" ? "Activo" : "Inactivo";
+                                break;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Error en VerAddres: " + ex.Message);
+            }
+            return listaFinal;
+        }
+        public bool AgregarIPAddress(string ipAddressWithMask, string interfaceName, string comment = "")
+        {
+            try
+            {
+                // Enviar el comando para agregar
+                Send("/ip/address/add");
+                Send("=address=" + ipAddressWithMask); // Ej: "192.168.88.1/24"
+                Send("=interface=" + interfaceName);   // Ej: "ether1" o "bridge"
+
+                if (!string.IsNullOrEmpty(comment))
+                {
+                    Send("=comment=" + comment);
+                }
+
+                // Finalizar el comando
+                Send("=disabled=no", true);
+
+                // Leer la respuesta y validar éxito
+                List<string> respuesta = Read();
+                return !respuesta.Any(r => r.Contains("!trap"));
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Error al agregar IP Address: " + ex.Message);
+                return false;
+            }
+        }
+        public bool CrearSimpleQueue(string name, string targetIp, string maxLimitUpload, string maxLimitDownload, string comment = "")
+        {
+            try
+            {
+                // 1. Iniciar la ruta del comando add
+                Send("/queue/simple/add");
+
+                // 2. Enviar los parámetros con la sintaxis de la API de MikroTik (=propiedad=valor)
+                Send("=name=" + name);
+                Send("=target=" + targetIp);
+
+                // max-limit se define como "Upload/Download" (Ejemplo: "5M/10M")
+                string maxLimit = $"{maxLimitUpload}/{maxLimitDownload}";
+                Send("=max-limit=" + maxLimit);
+
+                if (!string.IsNullOrEmpty(comment))
+                {
+                    Send("=comment=" + comment);
+                }
+
+                // 3. El segundo parámetro 'true' en el último Send indica el fin de la frase/comando
+                Send("=disabled=no", true);
+
+                // 4. Leer la respuesta del MikroTik para verificar si se creó exitosamente
+                foreach (string row in Read())
+                {
+                    if (row.StartsWith("!trap"))
+                    {
+                        // Un paquete !trap indica que MikroTik devolvió un error (ej. IP o Nombre ya existente)
+                        return false;
+                    }
+                    if (row.StartsWith("!done"))
+                    {
+                        // !done significa que la operación terminó con éxito
+                        return true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Manejar o registrar el error si es necesario
+            }
+
+            return false;
         }
         public bool ActualizarVelocidadQueue(string Name, string Velocidad)
         {

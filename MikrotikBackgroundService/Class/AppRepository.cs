@@ -15,6 +15,114 @@ namespace MikrotikBackgroundService.Class
         {
             GC.Collect();
         }
+        #region IPDisponible
+        public async Task<string> GetIPDisponible(int IdMikrotik, bool IsAntena)
+        {
+            try
+            {
+                using (SqlConnection sql = new SqlConnection(MikrotikConnection))
+                {
+                    using (SqlCommand cmd = new SqlCommand("GetIPDisponible", sql))
+                    {
+                        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+
+                        // Parámetros obligatorios para el SP
+                        cmd.Parameters.Add(new SqlParameter("@IdMikrotik", IdMikrotik));
+                        cmd.Parameters.Add(new SqlParameter("@IsAntena", IsAntena));
+
+                        await sql.OpenAsync().ConfigureAwait(false);
+
+                        // ExecuteScalarAsync ejecuta la consulta y retorna únicamente la 1ra columna de la 1ra fila
+                        object result = await cmd.ExecuteScalarAsync().ConfigureAwait(false);
+
+                        // Si no devolvió NULL o DBNull, lo retornamos como string
+                        if (result != null && result != DBNull.Value)
+                        {
+                            return result.ToString();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Puedes registrar la excepción si lo requieres
+            }
+
+            return string.Empty;
+        }
+        public async Task<string> GetIPDisponibleAdresslist(int IdMikrotik)
+        {
+            try
+            {
+                using (SqlConnection sql = new SqlConnection(MikrotikConnection))
+                {
+                    using (SqlCommand cmd = new SqlCommand("GetIPDisponibleAdresslist", sql))
+                    {
+                        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+
+                        // Parámetros obligatorios para el SP
+                        cmd.Parameters.Add(new SqlParameter("@IdMikrotik", IdMikrotik));
+
+                        await sql.OpenAsync().ConfigureAwait(false);
+
+                        // ExecuteScalarAsync ejecuta la consulta y retorna únicamente la 1ra columna de la 1ra fila
+                        object result = await cmd.ExecuteScalarAsync().ConfigureAwait(false);
+
+                        // Si no devolvió NULL o DBNull, lo retornamos como string
+                        if (result != null && result != DBNull.Value)
+                        {
+                            return result.ToString();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Puedes registrar la excepción si lo requieres
+            }
+
+            return string.Empty;
+        }
+        #endregion
+        #region Commet
+        public async Task<List<ListCommentsModel>> GetCommentsActivos(int IdMikrotik)
+        {
+            List<ListCommentsModel> list = new List<ListCommentsModel>();
+            try
+            {
+                using (SqlConnection sql = new SqlConnection(MikrotikConnection))
+                {
+                    using (SqlCommand cmd = new SqlCommand("GetCommentsActivos", sql))
+                    {
+                        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@IdMikrotik", IdMikrotik));
+                        await sql.OpenAsync().ConfigureAwait(false);
+                        using (var reader = await cmd.ExecuteReaderAsync().ConfigureAwait(false))
+                        {
+                            while (await reader.ReadAsync().ConfigureAwait(false))
+                            {
+                                list.Add(MapToListComments(reader));
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+            }
+            return list;
+        }
+        private ListCommentsModel MapToListComments(SqlDataReader reader)
+        {
+            return new ListCommentsModel()
+            {
+                Id = (int)reader["Id"],
+                Nombre = (string)reader["Nombre"],
+
+                Estatus = Convert.IsDBNull(reader["Estatus"]) ? string.Empty : (string)reader["Estatus"],
+            };
+        }
+        #endregion
         #region UsuariosMikrotik
         public async Task<UsuariosGeneralModel> GetUsuariosMikrotiksById(int Id)
         {
@@ -169,13 +277,16 @@ namespace MikrotikBackgroundService.Class
                 IdUsuarioM = (int)reader["IdUsuarioM"],
                 Nota = Convert.IsDBNull(reader["Nota"]) ? string.Empty : (string)reader["Nota"],
                 IdPlan = (int)reader["IdPlan"],
+                IdPlanActual = (int)reader["IdPlanActual"],
                 IdMikrotik = (int)reader["IdMikrotik"],
                 IdPlanOriginal = (int)reader["IdPlanOriginal"],
+                IdMikrotikReceptor = (int)reader["IdMikrotikReceptor"],
+                IdMikrotikOriginal = (int)reader["IdMikrotikOriginal"],
             };
         }
         #endregion
         #region Plan
-        public async Task<bool> UpdatePlanGeneral(int Id, int IdPlan, string Modo)
+        public async Task<bool> UpdatePlanGeneral(int Id, int IdPlan,int IdMikrotik, string Modo)
         {
             try
             {
@@ -186,6 +297,7 @@ namespace MikrotikBackgroundService.Class
                         cmd.CommandType = System.Data.CommandType.StoredProcedure;
                         cmd.Parameters.Add(new SqlParameter("@Id", Id));
                         cmd.Parameters.Add(new SqlParameter("@IdPlan", IdPlan));
+                        cmd.Parameters.Add(new SqlParameter("@IdMikrotik", IdMikrotik));
                         cmd.Parameters.Add(new SqlParameter("@Modo", Modo));
                         await sql.OpenAsync().ConfigureAwait(false);
                         await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);

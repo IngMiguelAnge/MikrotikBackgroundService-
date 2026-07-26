@@ -12,7 +12,10 @@
         public int IdUsuarioM { get; set; }
         public string Nota { get; set; }
         public int IdPlan { get; set; }
+        public int IdPlanActual { get; set; }
+        public int IdMikrotikReceptor { get; set; }
         public int IdMikrotik { get; set; }
         public int IdPlanOriginal { get; set; }
+        public int IdMikrotikOriginal { get; set; }
     }
 }
