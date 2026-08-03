@@ -15,7 +15,132 @@ namespace MikrotikBackgroundService.Class
         {
             GC.Collect();
         }
+        #region PlanesAnidados
+        public async Task<int> SavePlanAnidadoByMigracion(PlanAnidadoModel obj)
+        {
+            try
+            {
+                using (SqlConnection sql = new SqlConnection(MikrotikConnection))
+                {
+                    using (SqlCommand cmd = new SqlCommand("SavePlanAnidadoByMigracion", sql))
+                    {
+                        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@IdMikrotik", obj.IdMikrotik));
+                        cmd.Parameters.Add(new SqlParameter("@IdPlanInterno", obj.IdPlanInterno));
+                        cmd.Parameters.Add(new SqlParameter("@IdPlan", obj.IdPlan));
+                        cmd.Parameters.Add(new SqlParameter("@IsAntena", obj.IsAntena));
+                        SqlParameter outputParam = new SqlParameter("@VResp", System.Data.SqlDbType.Int)
+                        {
+                            Direction = System.Data.ParameterDirection.Output
+                        };
+                        cmd.Parameters.Add(outputParam);
+                        await sql.OpenAsync().ConfigureAwait(false);
+                        await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
+                        int idGenerado = (outputParam.Value != DBNull.Value) ? Convert.ToInt32(outputParam.Value) : 0;
+
+                        return idGenerado;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return 0;
+            }
+        }
+        #endregion
+        #region Planes
+        public async Task<int> SavePlanByMigracion(PlanModel obj)
+        {
+            try
+            {
+                using (SqlConnection sql = new SqlConnection(MikrotikConnection))
+                {
+                    using (SqlCommand cmd = new SqlCommand("SavePlanByMigracion", sql))
+                    {
+                        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@Velocidad", obj.Velocidad));
+                        cmd.Parameters.Add(new SqlParameter("@IsAntena", obj.IsAntena));
+                        SqlParameter outputParam = new SqlParameter("@VResp", System.Data.SqlDbType.Int)
+                        {
+                            Direction = System.Data.ParameterDirection.Output
+                        };
+                        cmd.Parameters.Add(outputParam);
+                        await sql.OpenAsync().ConfigureAwait(false);
+                        await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
+                        int idGenerado = (outputParam.Value != DBNull.Value) ? Convert.ToInt32(outputParam.Value) : 0;
+
+                        return idGenerado;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return 0;
+            }
+        }
+        #endregion
+        #region HistorialMovimientos
+        public async Task<bool> SaveHistorialMovimientos(HistorialMovimientosModel obj)
+        {
+            try
+            {
+                using (SqlConnection sql = new SqlConnection(MikrotikConnection))
+                {
+                    using (SqlCommand cmd = new SqlCommand("SaveHistorialMovimientos", sql))
+                    {
+                        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@Id", obj.Id));
+                        cmd.Parameters.Add(new SqlParameter("@Descripcion", obj.Descripcion));
+                        cmd.Parameters.Add(new SqlParameter("@Pagina", obj.Pagina));
+                        cmd.Parameters.Add(new SqlParameter("@IdUsuario", obj.IdUsuario));
+                        cmd.Parameters.Add(new SqlParameter("@Estatus", obj.Estatus));
+                        await sql.OpenAsync().ConfigureAwait(false);
+                        await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
+                        return true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+        #endregion
         #region IPDisponible
+        public async Task<string> GetIPExist(int IdMikrotik, bool IsAntena, string IP)
+        {
+            try
+            {
+                using (SqlConnection sql = new SqlConnection(MikrotikConnection))
+                {
+                    using (SqlCommand cmd = new SqlCommand("GetIPExist", sql))
+                    {
+                        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+
+                        // Parámetros obligatorios para el SP
+                        cmd.Parameters.Add(new SqlParameter("@IdMikrotik", IdMikrotik));
+                        cmd.Parameters.Add(new SqlParameter("@IsAntena", IsAntena));
+                        cmd.Parameters.Add(new SqlParameter("@IP", IP));
+                        await sql.OpenAsync().ConfigureAwait(false);
+
+                        // ExecuteScalarAsync ejecuta la consulta y retorna únicamente la 1ra columna de la 1ra fila
+                        object result = await cmd.ExecuteScalarAsync().ConfigureAwait(false);
+
+                        // Si no devolvió NULL o DBNull, lo retornamos como string
+                        if (result != null && result != DBNull.Value)
+                        {
+                            return result.ToString();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Puedes registrar la excepción si lo requieres
+            }
+
+            return string.Empty;
+        }
         public async Task<string> GetIPDisponible(int IdMikrotik, bool IsAntena)
         {
             try
@@ -50,7 +175,7 @@ namespace MikrotikBackgroundService.Class
 
             return string.Empty;
         }
-        public async Task<string> GetIPDisponibleAdresslist(int IdMikrotik)
+        public async Task<string> GetIPDisponibleAdresslist(int IdMikrotik, bool IsAntena)
         {
             try
             {
@@ -62,7 +187,7 @@ namespace MikrotikBackgroundService.Class
 
                         // Parámetros obligatorios para el SP
                         cmd.Parameters.Add(new SqlParameter("@IdMikrotik", IdMikrotik));
-
+                        cmd.Parameters.Add(new SqlParameter("@IsAntena", IsAntena));
                         await sql.OpenAsync().ConfigureAwait(false);
 
                         // ExecuteScalarAsync ejecuta la consulta y retorna únicamente la 1ra columna de la 1ra fila
@@ -118,12 +243,40 @@ namespace MikrotikBackgroundService.Class
             {
                 Id = (int)reader["Id"],
                 Nombre = (string)reader["Nombre"],
-
+                IdMikrotik = (int)reader["IdMikrotik"],
+                Mikrotik = (string)reader["Mikrotik"],
                 Estatus = Convert.IsDBNull(reader["Estatus"]) ? string.Empty : (string)reader["Estatus"],
             };
         }
         #endregion
         #region UsuariosMikrotik
+        public async Task<bool> SaveUsuariosGeneral(SaveUsuariosGeneralModel obj, int IdUsuario)
+        {
+            try
+            {
+                using (SqlConnection sql = new SqlConnection(MikrotikConnection))
+                {
+                    using (SqlCommand cmd = new SqlCommand("SaveUsuariosGeneral", sql))
+                    {
+                        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@Nombre", obj.Nombre));
+                        cmd.Parameters.Add(new SqlParameter("@Address", obj.Address));
+                        cmd.Parameters.Add(new SqlParameter("@IdMikrotik", obj.IdMikrotik));
+                        cmd.Parameters.Add(new SqlParameter("@IdInterno", obj.IdInterno));
+                        cmd.Parameters.Add(new SqlParameter("@Estatus", obj.Estatus));
+                        cmd.Parameters.Add(new SqlParameter("@IdPlan", obj.IdPlan));
+                        cmd.Parameters.Add(new SqlParameter("@Responsable", IdUsuario));
+                        await sql.OpenAsync().ConfigureAwait(false);
+                        await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
+                        return true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
         public async Task<UsuariosGeneralModel> GetUsuariosMikrotiksById(int Id)
         {
             UsuariosGeneralModel response = new UsuariosGeneralModel();
@@ -162,6 +315,29 @@ namespace MikrotikBackgroundService.Class
                 Usuario = (string)reader["Usuario"],
                 Estatus = (string)reader["Estatus"],
             };
+        }
+        public async Task<bool> UpdateEstatusGeneral(int Id, string Estatus, int Responsable)
+        {
+            try
+            {
+                using (SqlConnection sql = new SqlConnection(MikrotikConnection))
+                {
+                    using (SqlCommand cmd = new SqlCommand("UpdateEstatusGeneral", sql))
+                    {
+                        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@Id", Id));
+                        cmd.Parameters.Add(new SqlParameter("@Estatus", Estatus));
+                        cmd.Parameters.Add(new SqlParameter("@Responsable", Responsable));
+                        await sql.OpenAsync().ConfigureAwait(false);
+                        await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
+                        return true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
         }
         #endregion
         #region Mikrotik
@@ -353,6 +529,56 @@ namespace MikrotikBackgroundService.Class
             };
         }
         #endregion
-
+        #region wireless
+        public async Task<bool> SavePool(int IdMikrotik, string IP, bool Completado)
+        {
+            try
+            {
+                using (SqlConnection sql = new SqlConnection(MikrotikConnection))
+                {
+                    using (SqlCommand cmd = new SqlCommand("SavePool", sql))
+                    {
+                        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@IdMikrotik", IdMikrotik));
+                        cmd.Parameters.Add(new SqlParameter("@IP", IP));
+                        cmd.Parameters.Add(new SqlParameter("@Completado", Completado));
+                        await sql.OpenAsync().ConfigureAwait(false);
+                        await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
+                        return true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+        public async Task<bool> SaveWireless(InsertListWirelessModel obj)
+        {
+            try
+            {
+                using (SqlConnection sql = new SqlConnection(MikrotikConnection))
+                {
+                    using (SqlCommand cmd = new SqlCommand("SaveWireless", sql))
+                    {
+                        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@Address", obj.Address));
+                        cmd.Parameters.Add(new SqlParameter("@Comment", obj.Comment));
+                        cmd.Parameters.Add(new SqlParameter("@IdMikrotik", obj.IdMikrotik));
+                        cmd.Parameters.Add(new SqlParameter("@Estatus", obj.Estatus));
+                        cmd.Parameters.Add(new SqlParameter("@IdInterno", obj.IdInterno));
+                        cmd.Parameters.Add(new SqlParameter("@Completado", obj.Completado));
+                        await sql.OpenAsync().ConfigureAwait(false);
+                        await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
+                        return true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+        #endregion
     }
 }
