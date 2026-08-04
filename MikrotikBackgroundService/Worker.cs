@@ -389,14 +389,14 @@ namespace MikrotikBackgroundService
                                     {
                                         //Mismo mikrotik pero es cambio a fibra
                                         List<FibrasModel> ExisteEnFibra = mikrotik.VerFibra(Usuario.Usuario);
-                                        if(ExisteEnFibra.Count() > 0)
+                                        if (ExisteEnFibra.Count() > 0)
                                         {
                                             await obj.SaveTiempoCambioEstatus(item.Id, "Error", "El usuario " + Usuario.Usuario + " ya existe previamente en fibra revisar, se cancela la solicitud");
                                             continue;
                                         }
                                     buscaotraipFibra:
                                         var IPDisponibleFibra = obj.GetIPDisponible(item.IdMikrotikReceptor, false);
-                                      
+
                                         if (IPDisponibleFibra.Result != string.Empty)
                                         {
                                             ExisteEnFibra = mikrotik.VerFibrabyAddress(IPDisponibleFibra.Result);//Se extrae el id del queues
@@ -446,7 +446,7 @@ namespace MikrotikBackgroundService
                                                 //No existe en el mikrotik ahora si podemos meter el nuevo ip
                                                 //Insertamos en mikrotik
                                                 string idCreado = mikrotik.CrearFibra(Usuario.Usuario, IPDisponibleFibra.Result, PlanNuevo.Nombre);
-                                             
+
                                                 PlanModel objPlan = new PlanModel();
                                                 objPlan.Velocidad = PlanNuevo.Velocidad;
                                                 objPlan.IsAntena = false;
@@ -457,7 +457,7 @@ namespace MikrotikBackgroundService
                                                     continue;
                                                 }
                                                 string IdPlanInterno = mikrotik.BuscarPerfil(PlanNuevo.Nombre);
-                                                if(IdPlanInterno == string.Empty)
+                                                if (IdPlanInterno == string.Empty)
                                                 {
                                                     await obj.SaveTiempoCambioEstatus(item.Id, "Error", "No se logro extraer el perfil del plan para la solicitud asignada en el mikrotik, es posible que lo hayan borrado fuera del sistema. Favor de revisar.");
                                                     continue;
@@ -514,7 +514,7 @@ namespace MikrotikBackgroundService
                                             {
                                                 //No existe en la base pero si en el mikrotik
                                                 //Lo introduciremos para que lo saltemos y no recorreremos su serie
-                                                await obj.SavePool(item.IdMikrotikReceptor, IPDisponibleAddress.Result,true);
+                                                await obj.SavePool(item.IdMikrotikReceptor, IPDisponibleAddress.Result, true);
                                                 HistorialMovimientosModel H = new HistorialMovimientosModel
                                                 {
                                                     Id = 0,
@@ -591,10 +591,12 @@ namespace MikrotikBackgroundService
                                         Estatus = false
                                     };
                                     await obj.SaveHistorialMovimientos(H);
+
                                     if (Modo == "Pendiente")
                                         await obj.SaveTiempoCambioEstatus(item.Id, "Ejecutando", "Se " + nuevoEstatus);
                                     else
                                         await obj.SaveTiempoCambioEstatus(item.Id, "Completado", "Se " + nuevoEstatus);
+
 
                                 }
                                 else
@@ -651,11 +653,16 @@ namespace MikrotikBackgroundService
                                     Estatus = false
                                 };
                                 await obj.SaveHistorialMovimientos(H);
-                                if (Modo == "Pendiente")
-                                    await obj.SaveTiempoCambioEstatus(item.Id, "Ejecutando", "Se " + nuevoEstatus);
-                                if (Modo != "Pendiente" || item.Modo == "Permanente")
+                                if (item.Modo == "Permanente")
                                     await obj.SaveTiempoCambioEstatus(item.Id, "Completado", "Se " + nuevoEstatus);
-
+                                else
+                                {
+                                    if (Modo == "Pendiente")
+                                        await obj.SaveTiempoCambioEstatus(item.Id, "Ejecutando", "Se " + nuevoEstatus);
+                                    else
+                                        await obj.SaveTiempoCambioEstatus(item.Id, "Completado", "Se " + nuevoEstatus);
+                                }
+                               
                             }
                         }
                         else
