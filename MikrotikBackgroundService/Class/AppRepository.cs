@@ -25,6 +25,7 @@ namespace MikrotikBackgroundService.Class
                     using (SqlCommand cmd = new SqlCommand("SavePlanAnidadoByMigracion", sql))
                     {
                         cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@Id", obj.Id));
                         cmd.Parameters.Add(new SqlParameter("@IdMikrotik", obj.IdMikrotik));
                         cmd.Parameters.Add(new SqlParameter("@IdPlanInterno", obj.IdPlanInterno));
                         cmd.Parameters.Add(new SqlParameter("@IdPlan", obj.IdPlan));
@@ -259,6 +260,7 @@ namespace MikrotikBackgroundService.Class
                     using (SqlCommand cmd = new SqlCommand("SaveUsuariosGeneral", sql))
                     {
                         cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@Id", obj.Id));
                         cmd.Parameters.Add(new SqlParameter("@Nombre", obj.Nombre));
                         cmd.Parameters.Add(new SqlParameter("@Address", obj.Address));
                         cmd.Parameters.Add(new SqlParameter("@IdMikrotik", obj.IdMikrotik));
@@ -458,6 +460,7 @@ namespace MikrotikBackgroundService.Class
                 IdPlanOriginal = (int)reader["IdPlanOriginal"],
                 IdMikrotikReceptor = (int)reader["IdMikrotikReceptor"],
                 IdMikrotikOriginal = (int)reader["IdMikrotikOriginal"],
+                Programacion = Convert.IsDBNull(reader["Programacion"]) ? string.Empty : (string)reader["Programacion"],
             };
         }
         #endregion

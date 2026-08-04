@@ -99,26 +99,29 @@ namespace MikrotikBackgroundService.Class
         {
             List<string> output = new List<string>();
 
+            // 1. Espera activa más flexible
             int waitAttempts = 100;
             while (con.Available == 0 && waitAttempts > 0)
             {
-                System.Threading.Thread.Sleep(50);
+                System.Threading.Thread.Sleep(20);
                 waitAttempts--;
             }
 
-            // Si después de la espera sigue en 0, es que el router recibió 
-            // el comando pero no lo entendió o no lo aceptó.
             if (con.Available == 0)
             {
                 System.Diagnostics.Debug.WriteLine("El router no mandó datos de respuesta.");
                 return output;
             }
 
+            // Variable para rastrear la última etiqueta de bloque (ej. !done, !re, !trap)
+            string lastTag = "";
+
             while (true)
             {
                 int curByte = connection.ReadByte();
                 if (curByte == -1) break;
 
+                // Decodificación de longitud del estándar RouterOS API
                 long count = 0;
                 if (curByte < 0x80) { count = curByte; }
                 else if (curByte < 0xC0) { count = ((curByte ^ 0x80) << 8) + connection.ReadByte(); }
@@ -126,9 +129,11 @@ namespace MikrotikBackgroundService.Class
                 else if (curByte < 0xF0) { count = ((curByte ^ 0xE0) << 24) + (connection.ReadByte() << 16) + (connection.ReadByte() << 8) + connection.ReadByte(); }
                 else if (curByte == 0xF0) { count = (connection.ReadByte() << 24) + (connection.ReadByte() << 16) + (connection.ReadByte() << 8) + connection.ReadByte(); }
 
+                // Si la palabra tiene longitud 0, indica FIN DE SENTENCIA
                 if (count == 0)
                 {
-                    if (output.Count > 0 && (output.Last().StartsWith("!done") || output.Last().StartsWith("!trap") || output.Last().StartsWith("!fatal")))
+                    // Si la etiqueta del bloque actual fue !done, !trap o !fatal, TERMINAMOS
+                    if (lastTag == "!done" || lastTag == "!trap" || lastTag == "!fatal")
                     {
                         break;
                     }
@@ -144,9 +149,17 @@ namespace MikrotikBackgroundService.Class
                     read += result;
                 }
 
-                string word = Encoding.Default.GetString(buffer);// Usar UTF8 es mejor en v7
+                // Se recomienda UTF8 para compatibilidad con MikroTik v7+
+                string word = Encoding.UTF8.GetString(buffer);
                 output.Add(word);
+
+                // Guardamos las etiquetas especiales (!done, !re, !trap, etc.)
+                if (word.StartsWith("!"))
+                {
+                    lastTag = word;
+                }
             }
+
             return output;
         }
         public bool Login(string username, string password)
@@ -408,7 +421,7 @@ namespace MikrotikBackgroundService.Class
                 }
 
                 // El 'true' en el último Send envía la señal de fin de frase al RouterOS
-                string statusDisabled = disabled ? "yes" : "no";
+                string statusDisabled = disabled ? "no" : "yes";
                 Send("=disabled=" + statusDisabled, true);
 
                 // 4. Leer la respuesta y verificar que no devuelva un error (!trap)

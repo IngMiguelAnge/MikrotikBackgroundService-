@@ -150,7 +150,7 @@ namespace MikrotikBackgroundService
                                     {
                                         //_logger.LogInformation("Comenzando actualización de plan de base general");
                                         string ModoEnviar = Modo == "Pendiente" ? item.Modo : "Permanente";
-                                        var Ressult = await obj.UpdatePlanGeneral(item.Id, PlanNuevo.Id, EnviarMikrotik, ModoEnviar);
+                                        var Ressult = await obj.UpdatePlanGeneral(Usuario.Id, PlanNuevo.Id, EnviarMikrotik, ModoEnviar);
                                         if (item.Modo == "Permanente")
                                             await obj.SaveTiempoCambioEstatus(item.Id, "Completado", "Se actualizo el plan a " + PlanNuevo.Nombre);
                                         else
@@ -249,6 +249,7 @@ namespace MikrotikBackgroundService
                                                 objAnidado.IdPlanInterno = string.Empty;
                                                 objAnidado.IdPlan = objPlan.Id;
                                                 objAnidado.IsAntena = true;
+                                                objAnidado.Id = 0;
                                                 var ress = obj.SavePlanAnidadoByMigracion(objAnidado);
                                                 SaveUsuariosGeneralModel objuser = new SaveUsuariosGeneralModel();
                                                 objuser.IdMikrotik = item.IdMikrotikReceptor;
@@ -280,6 +281,7 @@ namespace MikrotikBackgroundService
                                                 objAnidado.IdPlanInterno = string.Empty;
                                                 objAnidado.IdPlan = objPlan.Id;
                                                 objAnidado.IsAntena = true;
+                                                objAnidado.Id = 0;
                                                 var ress = obj.SavePlanAnidadoByMigracion(objAnidado);
 
                                                 //Insertamos en mikrotik
@@ -293,13 +295,20 @@ namespace MikrotikBackgroundService
                                                 objuser.Address = IPDisponible.Result;
                                                 objuser.IdInterno = ExisteEnAntenas.First().id;
                                                 objuser.Estatus = ExisteEnAntenas.First().estatus;
-                                                objuser.Id = 0;
+                                                objuser.Id = Usuario.Id;
                                                 objuser.IdPlan = objPlan.Id;
                                                 var res = obj.SaveUsuariosGeneral(objuser, 1).Result;
-                                                await obj.SaveTiempoCambioEstatus(item.Id, "Completado", "Se transfirio exitosamente al usuario " + Usuario.Usuario + " de fibra a antena");
+                                                if (item.Modo == "Permanente")
+                                                    await obj.SaveTiempoCambioEstatus(item.Id, "Completado", "Se transfirio exitosamente al usuario " + Usuario.Usuario + " de antena a fibra");
+                                                else
+                                                {
+                                                    if (Modo == "Pendiente")
+                                                        await obj.SaveTiempoCambioEstatus(item.Id, "Ejecutando", "Se transfirio exitosamente al usuario " + Usuario.Usuario + " de antena a fibra");
+                                                    else
+                                                        await obj.SaveTiempoCambioEstatus(item.Id, "Completado", "Se transfirio exitosamente al usuario " + Usuario.Usuario + " de antena a fibra");
+                                                }
                                                 mikrotik.EliminarFibra(Usuario.IdInterno);
                                                 mikrotik.DeleteInterfacebyName(Usuario.Usuario);
-                                                obj.UpdateEstatusGeneral(Usuario.Id, "Eliminado", 1).Wait();
                                                 HistorialMovimientosModel H = new HistorialMovimientosModel
                                                 {
                                                     Id = 0,
@@ -418,6 +427,7 @@ namespace MikrotikBackgroundService
                                                 objAnidado.IdPlanInterno = ExisteEnFibra.First().idplan;
                                                 objAnidado.IdPlan = objPlan.Id;
                                                 objAnidado.IsAntena = false;
+                                                objAnidado.Id = 0;
                                                 var ress = obj.SavePlanAnidadoByMigracion(objAnidado);
                                                 SaveUsuariosGeneralModel objuser = new SaveUsuariosGeneralModel();
                                                 objuser.IdMikrotik = item.IdMikrotikReceptor;
@@ -446,12 +456,19 @@ namespace MikrotikBackgroundService
                                                     await obj.SaveTiempoCambioEstatus(item.Id, "Error", "No se logro guardar el plan para la solicitud asignada en la base de datos favor de revisar.");
                                                     continue;
                                                 }
+                                                string IdPlanInterno = mikrotik.BuscarPerfil(PlanNuevo.Nombre);
+                                                if(IdPlanInterno == string.Empty)
+                                                {
+                                                    await obj.SaveTiempoCambioEstatus(item.Id, "Error", "No se logro extraer el perfil del plan para la solicitud asignada en el mikrotik, es posible que lo hayan borrado fuera del sistema. Favor de revisar.");
+                                                    continue;
+                                                }
                                                 objPlan.Id = result.Result;
                                                 PlanAnidadoModel objAnidado = new PlanAnidadoModel();
                                                 objAnidado.IdMikrotik = item.IdMikrotikReceptor;
-                                                objAnidado.IdPlanInterno = mikrotik.BuscarPerfil(PlanNuevo.Nombre);
+                                                objAnidado.IdPlanInterno = IdPlanInterno;
                                                 objAnidado.IdPlan = objPlan.Id;
                                                 objAnidado.IsAntena = false;
+                                                objAnidado.Id = 0;
                                                 var ress = obj.SavePlanAnidadoByMigracion(objAnidado);
 
                                                 SaveUsuariosGeneralModel objuser = new SaveUsuariosGeneralModel();
@@ -460,13 +477,20 @@ namespace MikrotikBackgroundService
                                                 objuser.Address = IPDisponibleFibra.Result;
                                                 objuser.IdInterno = idCreado;
                                                 objuser.Estatus = "Activo";
-                                                objuser.Id = 0;
+                                                objuser.Id = Usuario.Id;
                                                 objuser.IdPlan = objPlan.Id;
                                                 var res = obj.SaveUsuariosGeneral(objuser, 1).Result;
-                                                await obj.SaveTiempoCambioEstatus(item.Id, "Completado", "Se transfirio exitosamente al usuario " + Usuario.Usuario + " de fibra a antena");
+                                                if (item.Modo == "Permanente")
+                                                    await obj.SaveTiempoCambioEstatus(item.Id, "Completado", "Se transfirio exitosamente al usuario " + Usuario.Usuario + " de fibra a antena");
+                                                else
+                                                {
+                                                    if (Modo == "Pendiente")
+                                                        await obj.SaveTiempoCambioEstatus(item.Id, "Ejecutando", "Se transfirio exitosamente al usuario " + Usuario.Usuario + " de fibra a antena");
+                                                    else
+                                                        await obj.SaveTiempoCambioEstatus(item.Id, "Completado", "Se transfirio exitosamente al usuario " + Usuario.Usuario + " de fibra a antena");
+                                                }
                                                 mikrotik.EliminarQueuePorNombre(Usuario.Usuario);
                                                 mikrotik.EliminarAntena(Usuario.IdInterno);
-                                                obj.UpdateEstatusGeneral(Usuario.Id, "Eliminado", 1).Wait();
                                                 HistorialMovimientosModel H = new HistorialMovimientosModel
                                                 {
                                                     Id = 0,
