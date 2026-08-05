@@ -176,7 +176,7 @@ namespace MikrotikBackgroundService
 
                                     if (PlanNuevo.IsAntena == true)
                                     {
-                                        //Mismo mikrotik pero es  cambio a antena
+                                        //Mismo mikrotik pero es cambio a aantena
                                         string ExisteEnQueue = string.Empty;
                                         ExisteEnQueue = mikrotik.VerIdQueue(Usuario.Usuario);
                                         if (ExisteEnQueue != string.Empty)
@@ -253,7 +253,7 @@ namespace MikrotikBackgroundService
                                                 var ress = obj.SavePlanAnidadoByMigracion(objAnidado);
                                                 SaveUsuariosGeneralModel objuser = new SaveUsuariosGeneralModel();
                                                 objuser.IdMikrotik = item.IdMikrotikReceptor;
-                                                objuser.Nombre = Usuario.Usuario;
+                                                objuser.Nombre = ExisteEnAntenas.First().comment;
                                                 objuser.Address = IPDisponible.Result;
                                                 objuser.IdInterno = ExisteEnAntenas.First().id;
                                                 objuser.Estatus = ExisteEnAntenas.First().estatus;
