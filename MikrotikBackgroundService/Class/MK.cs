@@ -1158,7 +1158,7 @@ namespace MikrotikBackgroundService.Class
             // Enviar el comando para crear el usuario
             Send("/ppp/secret/add");
             Send("=name=" + Usuario);
-            //Send("=password=" + contraseñaUsuario);
+            Send("=password=Fibra123");
             Send("=service=pppoe");
             Send("=profile=" + Perfil);
             Send("=remote-address=" + IPDisponible);

@@ -299,13 +299,13 @@ namespace MikrotikBackgroundService
                                                 objuser.IdPlan = objPlan.Id;
                                                 var res = obj.SaveUsuariosGeneral(objuser, 1).Result;
                                                 if (item.Modo == "Permanente")
-                                                    await obj.SaveTiempoCambioEstatus(item.Id, "Completado", "Se transfirio exitosamente al usuario " + Usuario.Usuario + " de antena a fibra");
+                                                    await obj.SaveTiempoCambioEstatus(item.Id, "Completado", "Se transfirio exitosamente al usuario " + Usuario.Usuario + " de fibra a antena");
                                                 else
                                                 {
                                                     if (Modo == "Pendiente")
-                                                        await obj.SaveTiempoCambioEstatus(item.Id, "Ejecutando", "Se transfirio exitosamente al usuario " + Usuario.Usuario + " de antena a fibra");
+                                                        await obj.SaveTiempoCambioEstatus(item.Id, "Ejecutando", "Se transfirio exitosamente al usuario " + Usuario.Usuario + " de fibra a antena");
                                                     else
-                                                        await obj.SaveTiempoCambioEstatus(item.Id, "Completado", "Se transfirio exitosamente al usuario " + Usuario.Usuario + " de antena a fibra");
+                                                        await obj.SaveTiempoCambioEstatus(item.Id, "Completado", "Se transfirio exitosamente al usuario " + Usuario.Usuario + " de fibra a antena");
                                                 }
                                                 mikrotik.EliminarFibra(Usuario.IdInterno);
                                                 mikrotik.DeleteInterfacebyName(Usuario.Usuario);
@@ -414,7 +414,7 @@ namespace MikrotikBackgroundService
 
                                                 PlanModel objPlan = new PlanModel();
                                                 objPlan.Velocidad = ExisteEnFibra.First().velocidad == string.Empty ? "1k/1k" : ExisteEnFibra.First().velocidad;
-                                                objPlan.IsAntena = true;
+                                                objPlan.IsAntena = false;
                                                 var result = obj.SavePlanByMigracion(objPlan);
                                                 if (result.Result == 0)
                                                 {
@@ -431,7 +431,7 @@ namespace MikrotikBackgroundService
                                                 var ress = obj.SavePlanAnidadoByMigracion(objAnidado);
                                                 SaveUsuariosGeneralModel objuser = new SaveUsuariosGeneralModel();
                                                 objuser.IdMikrotik = item.IdMikrotikReceptor;
-                                                objuser.Nombre = Usuario.Usuario;
+                                                objuser.Nombre = ExisteEnFibra.First().comment;
                                                 objuser.Address = IPDisponibleFibra.Result;
                                                 objuser.IdInterno = ExisteEnFibra.First().id;
                                                 objuser.Estatus = ExisteEnFibra.First().estatus;
