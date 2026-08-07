@@ -461,6 +461,7 @@ namespace MikrotikBackgroundService.Class
                 IdMikrotikReceptor = (int)reader["IdMikrotikReceptor"],
                 IdMikrotikOriginal = (int)reader["IdMikrotikOriginal"],
                 Programacion = Convert.IsDBNull(reader["Programacion"]) ? string.Empty : (string)reader["Programacion"],
+                PasswordFibra = Convert.IsDBNull(reader["PasswordFibra"]) ? string.Empty : (string)reader["PasswordFibra"],
             };
         }
         #endregion

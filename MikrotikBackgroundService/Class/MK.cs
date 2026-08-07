@@ -1152,13 +1152,13 @@ namespace MikrotikBackgroundService.Class
             }
             return listaFinal;
         }
-        public string CrearFibra(string Usuario,  string IPDisponible, string Perfil)
+        public string CrearFibra(string Usuario,  string IPDisponible, string Perfil, string PasswordFibra)
         {
             string idCreado = "";
             // Enviar el comando para crear el usuario
             Send("/ppp/secret/add");
             Send("=name=" + Usuario);
-            Send("=password=Fibra123");
+            Send("=password="+ PasswordFibra);
             Send("=service=pppoe");
             Send("=profile=" + Perfil);
             Send("=remote-address=" + IPDisponible);

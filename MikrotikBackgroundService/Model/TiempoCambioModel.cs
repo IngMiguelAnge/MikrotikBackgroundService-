@@ -18,5 +18,6 @@
         public int IdMikrotik { get; set; }
         public int IdPlanOriginal { get; set; }
         public int IdMikrotikOriginal { get; set; }
+        public string PasswordFibra { get; set; }
     }
 }
